@@ -12,6 +12,7 @@ export class CurrencyService {
     @InjectModel(Conversion.name)
     private conversionModel: Model<ConversionDocument>,
   ) {}
+
   async getSupportedCurrencies() {
     try {
       const response = await firstValueFrom(
@@ -21,11 +22,13 @@ export class CurrencyService {
       );
       return response.data.data;
     } catch (error) {
+      console.error('Backend: Failed to fetch supported currencies', error);
       throw new InternalServerErrorException(
         'Failed to fetch supported currencies',
       );
     }
   }
+
   async convertCurrency(
     from: string,
     to: string,
@@ -40,20 +43,26 @@ export class CurrencyService {
       );
       const exchangeRate = response.data.data[to];
       const convertedAmount = amount * exchangeRate;
-      return this.conversionModel.create({
+      
+      const conversionRecord = await this.conversionModel.create({
         fromCurrency: from,
         toCurrency: to,
         amount,
         userId,
         convertedAmount,
       });
+
+      return conversionRecord;
     } catch (error) {
+      console.error('Backend: Failed  to convert currency or save record', error);
       throw new InternalServerErrorException(
         'Failed to convert currency or save record',
       );
     }
   }
+
   async getConversionHistory(userId: string) {
-    return this.conversionModel.find({ userId }).sort({ timestamp: -1 }).exec();
+    const history = await this.conversionModel.find({ userId }).sort({ timestamp: -1 }).exec();
+    return history;
   }
 }
